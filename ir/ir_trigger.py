@@ -1,69 +1,64 @@
 import RPi.GPIO as GPIO
 import time
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
 
-RELAYER_PIN = 23
-IR_SENSOR_PIN = 24
-WAIT_SEC = 3
-WAIT_MILLI_SEC = WAIT_SEC * 1000
-TRIGGER_THRESHOLD = 3
+class IR_TRIGGER():
+    def __init__(self, IR_PIN, RELAYER_PIN):
+        self.RELAYER_PIN = RELAYER_PIN
+        self.IR_PIN = IR_PIN
+        self.wait_sec = 1
+        self.wait_milli_sec = self.wait_sec * 1000
+        self.trigger_limit = 3
+        self.trigger_count = 0
+        self.is_triggerable = True
+        self.ir_stat = False
 
-trigger_count = 0
-is_triggerable = True
-
-#GPIO 23 -> Low level trigger relayer
-GPIO.setup(RELAYER_PIN, GPIO.OUT)
-GPIO.output(RELAYER_PIN, GPIO.HIGH)
-
-#GPIO 24 -> Infrared Sensor
-GPIO.setup(IR_SENSOR_PIN, GPIO.IN)
-
-def ir_detected(IR_SENSOR_PIN):
-    print "Wait for " + str(WAIT_SEC)  + " seconds"
-    if GPIO.input(IR_SENSOR_PIN) == GPIO.HIGH :
-        GPIO.output(RELAYER_PIN, GPIO.LOW)
-        print "Low level relayer triggerd" + " RELAYER", GPIO.input(RELAYER_PIN)
-    else:
+        #GPIO 23 -> Low level trigger relayer
+        GPIO.setup(RELAYER_PIN, GPIO.OUT)
         GPIO.output(RELAYER_PIN, GPIO.HIGH)
 
-def rising():
-    GPIO.add_event_detect(IR_SENSOR_PIN, GPIO.RISING, callback=ir_detected, bouncetime=WAIT_SEC)
+        #GPIO 24 -> Infrared Sensor
+        GPIO.setup(IR_PIN, GPIO.IN)
 
-def trigger_on_off(time_length):
+        # GPIO.add_event_detect(IR_PIN, GPIO.RISING, callback=self.ir_detected, bouncetime=2000)
 
-    global trigger_count
+    def ir_detected(self, IR_PIN):
+        self.ir_stat = True
+        if self.is_triggerable == True:
+            if GPIO.input(IR_PIN) == GPIO.HIGH :
+                print "Trigger"
+                time.sleep(self.wait_sec)
+                self.trigger_on_off(.5)
+            else:
+                self.ir_stat = False
+        else:
+            GPIO.output(self.RELAYER_PIN, GPIO.HIGH)
 
-    if trigger_count < TRIGGER_THRESHOLD :
-        trigger_count += 1
-        print "Trigger count " + str(trigger_count)
-        GPIO.output(RELAYER_PIN, GPIO.LOW)
+        # print "Wait for " + str(self.wait_sec)  + " seconds"
+        # if GPIO.input(self.IR_PIN) == GPIO.HIGH :
+        #     GPIO.output(self.RELAYER_PIN, GPIO.LOW)
+        #     print "Low level relayer triggerd" + " RELAYER", GPIO.input(self.RELAYER_PIN)
+        # else:
+        #     GPIO.output(self.RELAYER_PIN, GPIO.HIGH)
+
+    # def rising():
+
+    def trigger_on_off(self, time_length):
+
+        print "Trigger count " + str(self.trigger_count)
+        GPIO.output(self.RELAYER_PIN, GPIO.LOW)
         time.sleep(time_length)
-        GPIO.output(RELAYER_PIN, GPIO.HIGH)
-    else:
-        is_triggerable = False
-        print "Trigger Stopped"
+        GPIO.output(self.RELAYER_PIN, GPIO.HIGH)
 
-def if_and_if(IR_SENSOR_PIN):
-    if GPIO.input(IR_SENSOR_PIN) == GPIO.HIGH and is_triggerable == True:
-
-        time.sleep(WAIT_SEC)
-        if GPIO.input(IR_SENSOR_PIN) == GPIO.HIGH:
-            trigger_on_off(.5)
-    # else:
-    #     GPIO.output(RELAYER_PIN, GPIO.HIGH)
-
-
-try:
-    # rising()
-    while 1:
-        print "IR SENSOR", GPIO.input(IR_SENSOR_PIN)
-        time.sleep(1)
-        if_and_if(IR_SENSOR_PIN)
-        # GPIO.output(RELAYER_PIN, GPIO.HIGH)
-
-except KeyboardInterrupt:
-    GPIO.cleanup()
-    print "Quit!"
-# if object is near
-
+    def run(self):
+        print "IR SENSOR", GPIO.input(self.IR_PIN)
+        print "is_triggerable: " + str(self.is_triggerable)
+        if GPIO.input(self.IR_PIN) == GPIO.HIGH and self.is_triggerable == True:
+            time.sleep(self.wait_sec)
+            if GPIO.input(self.IR_PIN) == GPIO.HIGH:
+                if self.trigger_count < self.trigger_limit :
+                    self.trigger_count += 1
+                    self.ir_detected(self.IR_PIN)
+                    # self.trigger_on_off(.5)
+                else:
+                    self.is_triggerable = False
+                    print "Trigger Stopped"
