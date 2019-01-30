@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-#Monitors GPIO pin 40 for input. A sound module is set up on physical pin 40.
-#https://pinout.xyz/pinout/wiringpi#
 import RPi.GPIO as GPIO
 import time
 import datetime
@@ -10,34 +8,44 @@ import os
 from pydub import AudioSegment
 from pydub.playback import play
 
-tweet = AudioSegment.from_file("./playfile/tweet.wav", format="wav")
+class Detect():
+    def __init__(self, PIN):
 
-GPIO.setmode(GPIO.BCM)
-SOUND_PIN = 25
-GPIO.setup(SOUND_PIN, GPIO.IN)
+        self.sensor_pin = PIN
+        self.count = 0
+        self.is_playable = True
 
-count = 0
+        # setup defaukt audio file to play
+        playfile = "tweet.mp3"
+        file_format = "mp3"
+        self.set_playfile(playfile, file_format)
 
-def DETECTED(SOUND_PIN):
-   global count
-   nowtime = datetime.datetime.now()
-   count += 1
+        # Raspberry pi event
+        GPIO.add_event_detect(PIN, GPIO.RISING, self.detected, bouncetime=2000)
 
-   print "Sound Detected! " + str(nowtime) + " " + str(count)
-   #os.system("./playfile.py")
-#   playfile()
-   play(tweet)
+    def set_playfile(self, playfile, file_format):
+        self.playfile = playfile
 
-   return nowtime
+        # specify the file name which will be played. Put this file name under
+        # playfile folder
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_path, "playfile", playfile)
+        audio_path = os.path.abspath(file_path)
+        self.tweet = AudioSegment.from_file(audio_path, format=file_format)
 
-print "Sound Module Test (CTRL+C to exit)"
-time.sleep(2)
-print "Ready"
+    def detected(self, channel):
+        nowtime = datetime.datetime.now()
+        self.count += 1
 
-try:
-   GPIO.add_event_detect(SOUND_PIN, GPIO.RISING, callback=DETECTED, bouncetime=2000)
-   while 1:
-      time.sleep(100)
-except KeyboardInterrupt:
-   print " Quit"
-   GPIO.cleanup()
+        print "Sound Detected! " + str(nowtime) + " " + str(self.count)
+       #os.system("./playfile.py")
+    #   playfile()
+        if self.is_playable == True:
+            play(self.tweet)
+
+    def get_playable(self):
+        return self.is_playable
+
+    def set_playable(self, true_or_false):
+        self.is_playable = true_or_false
+        # return nowtime
