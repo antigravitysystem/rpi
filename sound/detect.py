@@ -38,12 +38,14 @@ class Detect():
         self.count += 1
 
         print "Sound Detected! " + str(nowtime) + " " + str(self.count)
+        print "Triggeralbe: " + str(self.get_playable())
        #os.system("./playfile.py")
     #   playfile()
         if self.is_playable == True:
             play(self.tweet)
 
     def get_playable(self):
+        print "Playable:" + str(self.is_playable)
         return self.is_playable
 
     def set_playable(self, true_or_false):
